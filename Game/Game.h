@@ -8,6 +8,16 @@
 #define GOLFGAME_GAME_H
 
 
+enum tile_type {
+    normal,
+    bounce,
+    teleport_in,
+    teleport_out,
+    hole,
+    wall,
+};
+
+
 struct KeyState {
     bool m_bPressed = false;
     bool m_bHeld = false;
@@ -22,6 +32,7 @@ struct GameTile {
     bool m_bIsWall = false;
     bool m_bHasBall = false;
     float m_flLastTouchTime = 0.0f;
+    tile_type m_eType = normal;
 };
 
 

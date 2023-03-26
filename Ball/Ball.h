@@ -71,6 +71,10 @@ private:
     sf::Vector2f get_charge_velocity(sf::Vector2f mousePos);
 
     sf::Vector2f get_pullback_velocity(sf::Vector2f mousePos, sf::Vector2f launchPos);
+
+    void bounce_ball(sf::Vector2f tilePos, sf::Vector2f tileVelocity, sf::Vector2f tileNormal, float tileMass);
+
+    sf::Color lerp_color(sf::Color a, sf::Color b, float t);
 };
 
 

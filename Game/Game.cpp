@@ -6,6 +6,7 @@
 #include <time.h>
 #include <cfloat>
 #include "Game.h"
+#include "Collisions.hpp"
 
 #define X_MAX 1000
 #define X_STEP 20
@@ -56,6 +57,12 @@ void Game::generate_map() {
         }
     }
     generate_hole();
+    // randomly place bounce tiles
+    for (int i = 0; i < 10; i++) {
+        int randX = rand() % cols;
+        int randY = rand() % rows;
+        map[randX + randY * cols].m_eType = bounce;
+    }
 }
 
 
@@ -69,17 +76,17 @@ void Game::render_map() {
                                                         getSettings().windowWidth));
         float padding = 8.0f;
         float touch_time = tile.m_flLastTouchTime;
-        float current_time = gClock.getElapsedTime().asMilliseconds();
-        float time_diff = current_time - touch_time;
-        if (touch_time > 0) {
-            printf("%f - %f = %f\n", current_time, touch_time, time_diff);
-        }
+        bool render_rect = (tile.m_eType != tile_type::normal);
         sf::RectangleShape rect;
         rect.setSize(sf::Vector2f((float) getSettings().tileSize, (float) getSettings().tileSize));
         rect.setPosition(tile.position + sf::Vector2f(padding, padding));
         rect.setFillColor(sf::Color(55, 55, 55, 150));
         rect.setOutlineThickness(2.0f);
         rect.setOutlineColor(sf::Color(255, 192, 203));
+        if (tile.m_eType == tile_type::bounce) {
+            // convert pastel blue to sf::Color
+            rect.setOutlineColor(sf::Color(135, 206, 250, 150));
+        }
 
 
         sf::CircleShape circle;
@@ -92,7 +99,7 @@ void Game::render_map() {
                         (int) alpha));
 
 
-        tile.m_bIsHole ? window->draw(rect) : window->draw(circle);
+        render_rect ? window->draw(rect) : window->draw(circle);
     }
 }
 
@@ -102,6 +109,7 @@ void Game::generate_hole() {
     int hole_idx = rand() % map.size() - 1;
     // gen random hole
     map[hole_idx].m_bIsHole = true;
+    map[hole_idx].m_eType = tile_type::hole;
     hole = map[hole_idx];
 }
 
@@ -113,11 +121,33 @@ void Game::touch_loop() {
     for (int i = 0; i < rows; i++) {
         for (int j = 0; j < cols; j++) {
             const int32_t idx = i * cols + j;
-            contains_ball = (i == (int) (ballPos.y / (float) getSettings().tileSize) &&
-                             j == (int) (ballPos.x / (float) getSettings().tileSize));
-            if (contains_ball) {
-                map[idx].m_bHasBall = true;
-                map[idx].m_flLastTouchTime = gClock.getElapsedTime().asMilliseconds();
+            // set contains ball to true if ball touched edge of tile
+            // circle and rect collision detection
+
+            if (CollisionDetection::CheckCollide()) {
+                if (map[idx].m_eType == tile_type::normal) {
+                    map[idx].m_flLastTouchTime = gClock.getElapsedTime().asMilliseconds();
+                    map[idx].m_bHasBall = true;
+                } else {
+                    if (map[idx].m_eType == tile_type::bounce) {
+                        // get angle between ball and tile
+                        float angle = atan2(ballPos.y - map[idx].position.y, ballPos.x - map[idx].position.x);
+
+                        // get ball velocity
+                        auto ballVel = ball->get_velocity();
+
+                        // get ball speed
+                        float speed = sqrt(pow(ballVel.x, 2) + pow(ballVel.y, 2));
+
+                        // get new velocity
+                        float newVelX = speed * cos(angle);
+                        float newVelY = speed * sin(angle);
+
+                        // set new velocity
+                        ball->set_velocity(sf::Vector2f(newVelX, newVelY));
+                    }
+                }
+
             } else {
                 map[idx].m_bHasBall = false;
                 if (map[idx].m_flLastTouchTime > 0) {

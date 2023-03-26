@@ -91,6 +91,26 @@ sf::Vector2f Ball::get_charge_velocity(sf::Vector2f mousePos) {
     return launch_velocity;
 }
 
+void Ball::bounce_ball(sf::Vector2f tilePos, sf::Vector2f tileVelocity, sf::Vector2f tileNormal, float tileMass) {
+    float mass = 5.f;
+    sf::Vector2f relativeVelocity = velocity - tileVelocity;
+    float dotProduct = relativeVelocity.x * tileNormal.x + relativeVelocity.y * tileNormal.y;
+    float impulse = -(1 + 0.5) * dotProduct / (1 / mass + 1 / tileMass);
+    sf::Vector2f impulseVector = {impulse * tileNormal.x, impulse * tileNormal.y};
+    velocity += impulseVector / mass;
+    position += velocity;
+}
+
+
+sf::Color Ball::lerp_color(sf::Color a, sf::Color b, float t) {
+    return sf::Color(
+            a.r + (b.r - a.r) * t,
+            a.g + (b.g - a.g) * t,
+            a.b + (b.b - a.b) * t,
+            a.a + (b.a - a.a) * t
+    );
+}
+
 void Ball::update_state(sf::Vector2f mousePos, double deltaTime, bool mouseDown, bool mousePressed,
                         sf::RenderWindow &window) {
     sf::Vector2f initialPos = {0, 0};
@@ -118,6 +138,7 @@ void Ball::update_state(sf::Vector2f mousePos, double deltaTime, bool mouseDown,
                 position.y = window.getSize().y - radius;
                 velocity.y *= -1;
             }
+            
             position += velocity * (float) deltaTime;
             velocity.x *= friction;
             velocity.y *= friction;
@@ -139,7 +160,12 @@ void Ball::update_state(sf::Vector2f mousePos, double deltaTime, bool mouseDown,
     } else {
         set_velocity(get_charge_velocity(mousePos));
         // Draw velocity arrow
-        pointer.setFillColor(sf::Color::White);
+        // lerp the color with the velocity
+        float lerp = abs_velocity / 1000;
+        sf::Color darkGray = sf::Color(50, 50, 50);
+        sf::Color lightGray = sf::Color(200, 200, 200);
+        sf::Color color = lerp_color(darkGray, lightGray, lerp);
+        pointer.setFillColor(color);
         pointer.setSize(sf::Vector2f(abs_velocity, 4));
         window.draw(pointer);
     }
